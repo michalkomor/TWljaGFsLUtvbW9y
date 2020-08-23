@@ -2,15 +2,21 @@
 Zadanie rekrutacyjne GWP
 
 folder item:
+
 item.go - struktury i funkcje wspólne dla serwera i workera
+
 item_test.go - plik testowy
 
 folder server:
+
 server.go - obsługa serwera
+
 server_test.go - plik testowy
 
 folder worker:
+
 worker.go - obsługa workera
+
 worker_test.go - plik testowy
 
 przykładowe komendy z poziomu konsoli:
