@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GWP/item"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,22 +17,8 @@ import (
 
 var maxSize int64 = (1 << 20) //1MB
 var index int = 0             //initial index value
-var urls = []url{}            //slice to store URLs
 
-//structure to store URL's history
-type history struct {
-	Response  string  `json:"response"`
-	Duration  float64 `json:"duration"`
-	CreatedAt int64   `json:"created_at"`
-}
-
-//structure to store URLs
-type url struct {
-	ID       int       `json:"id"`
-	URL      string    `json:"url"`
-	Interval int       `json:"interval"`
-	History  []history `json:"-"`
-}
+var collection = item.New() //slice to store URLs
 
 //AddURL - Add URL to slice of URLs
 func AddURL(w http.ResponseWriter, r *http.Request) {
@@ -42,8 +29,8 @@ func AddURL(w http.ResponseWriter, r *http.Request) {
 	//checks if request body contains only fields that are in the structure
 	dec.DisallowUnknownFields()
 	//decode request in json format and store it in the url struct
-	var newURL url
-	err := dec.Decode(&newURL)
+	var newItem item.Item
+	err := dec.Decode(&newItem)
 	//check various errors
 	if err != nil {
 		handleError(err, w)
@@ -51,17 +38,17 @@ func AddURL(w http.ResponseWriter, r *http.Request) {
 	}
 	//there was no error - add URL to slice of URLs
 	index++
-	newURL.ID = index
-	urls = append(urls, newURL)
+	newItem.ID = index
+	collection.Add(newItem)
 	w.WriteHeader(200)
-	msg := fmt.Sprintf("{\"id\": %d}", newURL.ID)
+	msg := fmt.Sprintf("{\"id\": %d}", newItem.ID)
 	w.Write([]byte(msg))
 	return
 }
 
 //GetAllURLs - list all URLs in the slice
 func GetAllURLs(w http.ResponseWriter, r *http.Request) {
-	jsonBytes, err := json.Marshal(urls)
+	jsonBytes, err := json.Marshal(collection.Items)
 	if err != nil {
 		w.WriteHeader(500)
 		w.Write([]byte("Error occured while marshaling to JSON"))
@@ -79,7 +66,7 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	for _, currURL := range urls {
+	for _, currURL := range collection.GetAll() {
 		if currURL.ID == ID {
 			//url = currURL
 			jsonBytes, err := json.Marshal(currURL)
@@ -105,9 +92,9 @@ func DeleteURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	for i, currURL := range urls {
+	for i, currURL := range collection.GetAll() {
 		if currURL.ID == ID {
-			urls = append(urls[:i], urls[i+1:]...)
+			collection.Delete(i)
 			msg := fmt.Sprintf("item %d deleted", ID)
 			w.WriteHeader(200)
 			w.Write([]byte(msg))
@@ -127,7 +114,7 @@ func UpdateURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	for i, currURL := range urls {
+	for i, currURL := range collection.GetAll() {
 		if currURL.ID == ID {
 			//checks if request size does not exceed maxSize (1MB)
 			r.Body = http.MaxBytesReader(w, r.Body, maxSize)
@@ -136,20 +123,20 @@ func UpdateURL(w http.ResponseWriter, r *http.Request) {
 			//checks if request body contains only fields that are in the structure
 			dec.DisallowUnknownFields()
 			//decodes request in json format and store it in the url struct
-			var newURL url
-			err := dec.Decode(&newURL)
+			var newItem item.Item
+			err := dec.Decode(&newItem)
 			//checks various errors
 			if err != nil {
 				handleError(err, w)
 				return
 			}
 			//there was no error - update URL
-			urls[i].URL = newURL.URL
-			urls[i].Interval = newURL.Interval
+			collection.Items[i].URL = newItem.URL
+			collection.Items[i].Interval = newItem.Interval
 			//delete the history of old url
-			urls[i].History = make([]history, 0)
+			collection.Items[i].History = make([]item.History, 0)
 			w.WriteHeader(200)
-			msg := fmt.Sprintf("{\"id\": %d} updated", urls[i].ID)
+			msg := fmt.Sprintf("{\"id\": %d} updated", collection.Items[i].ID)
 			w.Write([]byte(msg))
 			w.WriteHeader(200)
 			return
@@ -168,7 +155,7 @@ func GetURLHistory(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	for _, currURL := range urls {
+	for _, currURL := range collection.GetAll() {
 		if currURL.ID == ID {
 			jsonBytes, err := json.Marshal(currURL.History)
 			if err != nil {
@@ -193,7 +180,7 @@ func AddURLHistory(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	for i, currURL := range urls {
+	for i, currURL := range collection.GetAll() {
 		if currURL.ID == ID {
 			r.Body = http.MaxBytesReader(w, r.Body, maxSize)
 			//new decoder that reads from r
@@ -201,13 +188,13 @@ func AddURLHistory(w http.ResponseWriter, r *http.Request) {
 			//checks if request body contains only fields that are in the structure
 			dec.DisallowUnknownFields()
 			//decodes request in json format and store it in the url struct
-			var newHistory history
+			var newHistory item.History
 			err := dec.Decode(&newHistory)
 			if err != nil {
 				handleError(err, w)
 				return
 			}
-			urls[i].History = append(urls[i].History, newHistory)
+			collection.Items[i].History = append(collection.Items[i].History, newHistory)
 			w.WriteHeader(200)
 			return
 		}

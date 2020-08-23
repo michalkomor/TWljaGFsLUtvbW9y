@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GWP/item"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -40,11 +41,10 @@ func TestGetWrongID(t *testing.T) {
 
 	router := chi.NewRouter()
 
-	r2 := httptest.NewRequest(http.MethodGet, "/api/fetcher/1", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/fetcher/1", nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r2)
+	router.ServeHTTP(w, r)
 
-	//GetURL(w, r2)
 	expectedHeader := http.StatusNotFound
 	if w.Code != expectedHeader {
 		t.Errorf("Expects %d but received %d", expectedHeader, w.Code)
@@ -53,7 +53,7 @@ func TestGetWrongID(t *testing.T) {
 
 func TestPostGetAndDeleteURL(t *testing.T) {
 	//create new json with url to post
-	testURL := url{
+	testURL := item.Items{
 		ID:       1,
 		URL:      "https://httpbin.org/range/1",
 		Interval: 5,

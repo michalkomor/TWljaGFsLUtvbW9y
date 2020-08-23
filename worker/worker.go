@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GWP/item"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -15,25 +16,10 @@ import (
 )
 
 var requestTimeout = 5 * time.Second //5 seconds
-var urls = []url{}                   //slice to store URLs
-
-//structure to store URL's history
-type history struct {
-	Response  string  `json:"response"`
-	Duration  float64 `json:"duration"`
-	CreatedAt int64   `json:"created_at"`
-}
-
-//structure to store URLs
-type url struct {
-	ID       int       `json:"id"`
-	URL      string    `json:"url"`
-	Interval int       `json:"interval"`
-	History  []history `json:"-"`
-}
+var collection = item.New()          //slice to store URLs
 
 //GetAllURLs - sends json file with all exisitng url
-func GetAllURLs(urls *[]url) error {
+func GetAllURLs() error {
 	r, err := http.Get("http://localhost:8080/api/fetcher")
 	if err != nil {
 		log.Println(err)
@@ -45,7 +31,7 @@ func GetAllURLs(urls *[]url) error {
 	//checks if request body contains only fields that are in the structure
 	dec.DisallowUnknownFields()
 	//decode request in json format and store it in the url struct
-	err = dec.Decode(&urls)
+	err = dec.Decode(&collection.Items)
 	//check various errors
 	if err != nil {
 		handleError(err)
@@ -97,44 +83,41 @@ func handleError(err error) {
 
 func main() {
 	var wg sync.WaitGroup
-	err := GetAllURLs(&urls)
-	if err != nil {
-		log.Println(err.Error())
-	}
-	urlsLength := len(urls)
+	GetAllURLs()
+	urlsLength := len(collection.GetAll())
 	wg.Add(urlsLength)
-	for i, _ := range urls {
+	for i, _ := range collection.GetAll() {
 		go func(i int) {
 			defer wg.Done()
 			var msg string
-			var hist history
+			var hist item.History
 			client := http.Client{
 				Timeout: 5 * time.Second,
 			}
-			ticker := time.NewTicker(time.Duration((urls[i].Interval)) * time.Second)
+			ticker := time.NewTicker(time.Duration((collection.Items[i].Interval)) * time.Second)
 			for {
 				select {
 				case <-ticker.C:
 					{
-						url := urls[i]
-						hist = history{}
+						urlItem := collection.Items[i]
+						//hist = make([]url.History, 0)
 						start := time.Now()
-						r, err := client.Get(url.URL)
+						r, err := client.Get(urlItem.URL)
 						secs := time.Since(start).Seconds()
 						if err != nil {
 							msg = err.Error()
-							hist = history{Response: "", Duration: secs, CreatedAt: time.Now().Unix()}
-							urls[i].History = append(urls[i].History, hist)
+							hist = item.History{Response: "", Duration: secs, CreatedAt: time.Now().Unix()}
+							collection.Items[i].History = append(collection.Items[i].History, hist)
 						} else {
 							defer r.Body.Close()
 							data, err := ioutil.ReadAll(r.Body)
 							if err != nil {
 								msg = err.Error()
-								hist = history{Response: "", Duration: secs, CreatedAt: time.Now().Unix()}
-								urls[i].History = append(urls[i].History, hist)
+								hist = item.History{Response: "", Duration: secs, CreatedAt: time.Now().Unix()}
+								collection.Items[i].History = append(collection.Items[i].History, hist)
 							} else {
-								hist = history{Response: string(data), Duration: secs, CreatedAt: time.Now().Unix()}
-								urls[i].History = append(urls[i].History, hist)
+								hist = item.History{Response: string(data), Duration: secs, CreatedAt: time.Now().Unix()}
+								collection.Items[i].History = append(collection.Items[i].History, hist)
 								msg = string(data)
 							}
 						}
@@ -142,7 +125,7 @@ func main() {
 						if err != nil {
 							log.Println(err.Error())
 						}
-						temp := fmt.Sprintf("%d", urls[i].ID)
+						temp := fmt.Sprintf("%d", collection.Items[i].ID)
 						postURL := fmt.Sprintf("http://localhost:8080/api/fetcher/" + temp + "/history")
 						_, err = http.Post(postURL, "application/json", bytes.NewBuffer(jsonBytes))
 						if err != nil {

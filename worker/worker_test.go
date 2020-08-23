@@ -5,8 +5,8 @@ import (
 )
 
 func TestGetAllURLs(t *testing.T) {
-	err := GetAllURLs(&urls)
+	err := GetAllURLs()
 	if err != nil {
-		t.Error(err)
-	}
+	 	t.Error(err)
+	 }
 }
