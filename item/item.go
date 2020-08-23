@@ -1,12 +1,12 @@
 package item
 
-type Getter interface {
-	GetAll() []Item
-}
-
-type Adder interface {
-	Add(item Item)
-}
+// type Getter interface {
+// 	GetAll() []Item
+// }
+//
+// type Adder interface {
+// 	Add(item Item)
+// }
 
 type Item struct {
 	ID       int       `json:"id"`
