@@ -52,34 +52,48 @@ func TestGetWrongID(t *testing.T) {
 }
 
 func TestPostGetAndDeleteURL(t *testing.T) {
+
+	//ts := httptest.NewServer(r)
+	httptest.NewServer(r)
+	//defer ts.Close()
 	//create new json with url to post
-	testURL := item.Items{
+	testURL := item.Item{
 		ID:       1,
 		URL:      "https://httpbin.org/range/1",
 		Interval: 5,
 	}
+	var collection = item.New()
+	collection.Add(testURL)
 	bts, err := json.Marshal(testURL)
 	if err != nil {
 		t.Error(err)
 	}
 	//post URL
-	r := httptest.NewRequest(http.MethodPost, "/api/fetcher", bytes.NewReader(bts))
-	w := httptest.NewRecorder()
-	AddURL(w, r)
+	r1 := httptest.NewRequest(http.MethodPost, "/api/fetcher", bytes.NewReader(bts))
+	w1 := httptest.NewRecorder()
+	//router.ServeHTTP(w, r)
+	AddURL(w1, r1)
 	expectedResponse := "{\"id\": 1}"
-	if w.Body.String() != expectedResponse {
-		t.Errorf("Expects %s but received %s", expectedResponse, w.Body.String())
+	if w1.Body.String() != expectedResponse {
+		t.Errorf("Expects %s but received %s", expectedResponse, w1.Body.String())
 	}
 	//get URL
-
+	r2 := httptest.NewRequest(http.MethodGet, "/api/fetcher", bytes.NewReader(nil))
+	w2 := httptest.NewRecorder()
+	GetAllURLs(w2, r2)
+	jsonbytes, _ := json.Marshal(collection.Items)
+	expectedResponse = string(jsonbytes)
+	if w2.Body.String() != expectedResponse {
+		t.Errorf("Expects %s but received %s", expectedResponse, w2.Body.String())
+	}
 	//delete request
-	// r = httptest.NewRequest(http.MethodDelete, "/api/fetcher/1", nil)
-	// w = httptest.NewRecorder()
-	//
-	// DeleteURL(w, r)
-	//
+	// r3 := httptest.NewRequest(http.MethodDelete, "/api/fetcher/1", nil)
+	// w3 := httptest.NewRecorder()
+	// //
+	// DeleteURL(w3, r3)
+	// //
 	// expectedResponse = "item 1 deleted"
-	// if w.Body.String() != expectedResponse {
-	// 	t.Errorf("Expects %s but received %s", expectedResponse, w.Body.String())
+	// // if w3.Body.String() != expectedResponse {
+	// t.Errorf("Expects %s but received %s", expectedResponse, w3.Body.String())
 	// }
 }

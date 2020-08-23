@@ -20,6 +20,8 @@ var index int = 0             //initial index value
 
 var collection = item.New() //slice to store URLs
 
+var r = chi.NewRouter()
+
 //AddURL - Add URL to slice of URLs
 func AddURL(w http.ResponseWriter, r *http.Request) {
 	//checks if request size does not exceed maxSize (1MB)
@@ -244,7 +246,7 @@ func handleError(err error, w http.ResponseWriter) {
 }
 
 func main() {
-	r := chi.NewRouter()
+
 	// Logs the start and end of each request with the elapsed processing time
 	r.Use(middleware.Logger)
 	// Injects a request ID into the context of each request
