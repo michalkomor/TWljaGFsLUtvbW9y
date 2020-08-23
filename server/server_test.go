@@ -7,56 +7,28 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/go-chi/chi"
+	//"github.com/go-chi/chi"
 )
-
-//type TestServer struct{}
 
 func TestInitialState(t *testing.T) {
 
-	// //router := chi.NewRouter()
-	// //req := httptest.NewRequest(http.MethodGet, "/api/fetcher", nil)
-	// //recorder := httptest.NewRecorder()
-	// //srv := httptest.NewServer(router)
-	// resp, err := http.Get("http://localhost:8080/api/fetcher")
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	// defer resp.Body.Close()
-	// body, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	//
-	// //GetAllURLs(w, r)
-	// expectedResponse := "[]"
-	// //t.Errorf("Expects %s but received %s", expectedResponse, body)
-	// if string(body) != expectedResponse {
-	// 	t.Errorf("Expects %s but received %s ", expectedResponse, string(body))
-	// }
-}
+	r1 := httptest.NewRequest(http.MethodGet, "/api/fetcher", nil)
+	w1 := httptest.NewRecorder()
+	GetAllURLs(w1, r1)
 
-func TestGetWrongID(t *testing.T) {
-
-	router := chi.NewRouter()
-
-	r := httptest.NewRequest(http.MethodGet, "/api/fetcher/1", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-
-	expectedHeader := http.StatusNotFound
-	if w.Code != expectedHeader {
-		t.Errorf("Expects %d but received %d", expectedHeader, w.Code)
+	bytes, _ := json.Marshal(collection.Items)
+	expectedResponse := string(bytes)
+	if w1.Body.String() != expectedResponse {
+		t.Errorf("Expects %s but received %s ", expectedResponse, w1.Body.String())
 	}
 }
 
-func TestPostGetAndDeleteURL(t *testing.T) {
 
-	//ts := httptest.NewServer(r)
+func TestPostAndGetURL(t *testing.T) {
+
 	httptest.NewServer(r)
-	//defer ts.Close()
-	//create new json with url to post
+
+
 	testURL := item.Item{
 		ID:       1,
 		URL:      "https://httpbin.org/range/1",
@@ -71,7 +43,7 @@ func TestPostGetAndDeleteURL(t *testing.T) {
 	//post URL
 	r1 := httptest.NewRequest(http.MethodPost, "/api/fetcher", bytes.NewReader(bts))
 	w1 := httptest.NewRecorder()
-	//router.ServeHTTP(w, r)
+
 	AddURL(w1, r1)
 	expectedResponse := "{\"id\": 1}"
 	if w1.Body.String() != expectedResponse {
@@ -81,19 +53,34 @@ func TestPostGetAndDeleteURL(t *testing.T) {
 	r2 := httptest.NewRequest(http.MethodGet, "/api/fetcher", bytes.NewReader(nil))
 	w2 := httptest.NewRecorder()
 	GetAllURLs(w2, r2)
-	jsonbytes, _ := json.Marshal(collection.Items)
+	jsonbytes, err := json.Marshal(collection.Items)
+	if err != nil {
+		t.Error(err)
+	}
 	expectedResponse = string(jsonbytes)
 	if w2.Body.String() != expectedResponse {
 		t.Errorf("Expects %s but received %s", expectedResponse, w2.Body.String())
 	}
 	//delete request
-	// r3 := httptest.NewRequest(http.MethodDelete, "/api/fetcher/1", nil)
-	// w3 := httptest.NewRecorder()
+	r3 := httptest.NewRequest(http.MethodDelete, "/api/fetcher/1", nil)
+	w3 := httptest.NewRecorder()
 	// //
-	// DeleteURL(w3, r3)
+	DeleteURL(w3, r3)
 	// //
-	// expectedResponse = "item 1 deleted"
+	expectedResponse = "item 1 deleted"
 	// // if w3.Body.String() != expectedResponse {
-	// t.Errorf("Expects %s but received %s", expectedResponse, w3.Body.String())
+	t.Errorf("Expects %s but received %s", expectedResponse, w3.Body.String())
 	// }
+}
+
+
+func TestGetWrongID(t *testing.T) {
+	httptest.NewServer(r)
+	r1 := httptest.NewRequest(http.MethodGet, "/api/fetcher/1", nil)
+	w1 := httptest.NewRecorder()
+	GetURL(w1, r1)
+	expectedHeader := http.StatusNotFound
+	if w1.Code != expectedHeader {
+		t.Errorf("Expects %d but received %d", expectedHeader, w1.Code)
+	}
 }
