@@ -3,15 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
-	"strings"
-	"errors"
-	"io"
 )
 
 var requestTimeout = 5 * time.Second //5 seconds
@@ -95,13 +95,11 @@ func handleError(err error) {
 	}
 }
 
-
-
 func main() {
 	var wg sync.WaitGroup
 	err := GetAllURLs(&urls)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 	}
 	urlsLength := len(urls)
 	wg.Add(urlsLength)
@@ -140,10 +138,16 @@ func main() {
 								msg = string(data)
 							}
 						}
-						jsonBytes, _ := json.Marshal(hist)
+						jsonBytes, err := json.Marshal(hist)
+						if err != nil {
+							log.Println(err.Error())
+						}
 						temp := fmt.Sprintf("%d", urls[i].ID)
 						postURL := fmt.Sprintf("http://localhost:8080/api/fetcher/" + temp + "/history")
 						_, err = http.Post(postURL, "application/json", bytes.NewBuffer(jsonBytes))
+						if err != nil {
+							log.Println(err.Error())
+						}
 						fmt.Println(msg)
 					}
 				}
